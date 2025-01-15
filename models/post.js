@@ -81,7 +81,7 @@ async function getAllPosts() {
         users.avatar_url
       FROM posts 
       JOIN users ON posts.user_id = users.id
-      ORDER BY posts.created_at DESC
+      ORDER BY posts.publication_date DESC
     `);
     return rows;
   } catch (error) {
