@@ -19,6 +19,22 @@ function generateTokens(userId) {
   return { accessToken, refreshToken };
 }
 
+function setTokenCookies(res, accessToken, refreshToken) {
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000
+  });
+
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+}
+
 const registerUser = async (req, res) => {
   try {
     const { username, email, password, avatar_url } = req.body;
@@ -26,12 +42,20 @@ const registerUser = async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'Username, email, and password are required' });
     }
+
     const existingUser = await userModel.getUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
+
     const userId = await userModel.createUser(username, email, password, avatar_url);
-    res.status(201).json({ message: 'User registered successfully', userId });
+    
+    // Сразу логиним пользователя после регистрации
+    const { accessToken, refreshToken } = generateTokens(userId);
+    await tokenModel.saveRefreshToken(userId, refreshToken);
+    setTokenCookies(res, accessToken, refreshToken);
+
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({ message: 'Failed to register user' });
@@ -57,20 +81,7 @@ const loginUser = async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user.id);
     await tokenModel.saveRefreshToken(user.id, refreshToken);
-
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    setTokenCookies(res, accessToken, refreshToken);
 
     res.status(200).json({ message: 'Logged in successfully' });
   } catch (error) {

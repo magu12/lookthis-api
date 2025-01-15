@@ -13,26 +13,22 @@ const authMiddleware = require('../middleware/auth');
  * @swagger
  * /users:
  *   get:
- *     summary: Get a list of all users
+ *     summary: Get all users
  *     tags: [Users]
- *     security:
- *      - bearerAuth: []
  *     responses:
  *       200:
- *         description: Successful response
+ *         description: List of users
  *       500:
- *          description: Internal Server Error
+ *         description: Internal Server Error
  */
-router.get('/', authMiddleware, userController.getUsers);
+router.get('/', userController.getUsers);
 
 /**
  * @swagger
  * /users/{id}:
  *   get:
- *     summary: Get a user by ID
+ *     summary: Get user by ID with their posts
  *     tags: [Users]
- *     security:
- *      - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -42,22 +38,22 @@ router.get('/', authMiddleware, userController.getUsers);
  *           type: integer
  *     responses:
  *       200:
- *         description: Successful response
+ *         description: User details with posts
  *       404:
  *         description: User not found
  *       500:
- *          description: Internal Server Error
+ *         description: Internal Server Error
  */
-router.get('/:id', authMiddleware, userController.getUserById);
+router.get('/:id', userController.getUserById);
 
 /**
  * @swagger
  * /users/{id}:
  *   put:
- *     summary: Update a user's information
+ *     summary: Update user profile
  *     tags: [Users]
  *     security:
- *       - bearerAuth: []
+ *       - cookieAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -74,21 +70,19 @@ router.get('/:id', authMiddleware, userController.getUserById);
  *             properties:
  *               username:
  *                 type: string
- *                 description: New username for the user
- *               avatar:
+ *               avatar_url:
  *                 type: string
- *                 description: New avatar URL for the user
  *     responses:
  *       200:
  *         description: User updated successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad request
  *       403:
- *          description: Unauthorized
+ *         description: Forbidden - can only update own profile
  *       404:
  *         description: User not found
  *       500:
- *          description: Internal Server Error
+ *         description: Internal Server Error
  */
 router.put('/:id', authMiddleware, userController.updateUser);
 
@@ -96,10 +90,10 @@ router.put('/:id', authMiddleware, userController.updateUser);
  * @swagger
  * /users/{id}/password:
  *   put:
- *     summary: Update a user's password
+ *     summary: Update user password
  *     tags: [Users]
  *     security:
- *       - bearerAuth: []
+ *       - cookieAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -114,20 +108,19 @@ router.put('/:id', authMiddleware, userController.updateUser);
  *           schema:
  *             type: object
  *             properties:
- *               password:
+ *               newPassword:
  *                 type: string
- *                 description: New password for the user
  *     responses:
  *       200:
  *         description: Password updated successfully
  *       400:
- *         description: Bad Request
+ *         description: Bad request
  *       403:
- *          description: Unauthorized
+ *         description: Forbidden - can only change own password
  *       404:
  *         description: User not found
  *       500:
- *          description: Internal Server Error
+ *         description: Internal Server Error
  */
 router.put('/:id/password', authMiddleware, userController.updateUserPassword);
 
