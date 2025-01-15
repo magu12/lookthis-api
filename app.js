@@ -6,20 +6,25 @@ const swaggerJsdoc = require('swagger-jsdoc')
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts')
+const cookieParser = require('cookie-parser');
 
 require('dotenv').config()
 
 const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: '*',
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://lookthis-front-0d9b3ca95599.herokuapp.com/'
+    : 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);

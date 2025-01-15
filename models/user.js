@@ -3,10 +3,18 @@ const bcrypt = require('bcrypt');
 
 async function createUser(username, email, password, avatar_url) {
   try {
+    const defaultAvatar = `data:image/svg+xml;base64,${Buffer.from(`
+      <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="100" r="100" fill="#E5E7EB"/>
+        <circle cx="100" cy="85" r="35" fill="#9CA3AF"/>
+        <path d="M100 135c25 0 47 15 55 35H45c8-20 30-35 55-35z" fill="#9CA3AF"/>
+      </svg>
+    `).toString('base64')}`;
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
       'INSERT INTO users (username, email, password, avatar_url) VALUES (?, ?, ?, ?)',
-      [username, email, hashedPassword, avatar_url]
+      [username, email, hashedPassword, avatar_url || defaultAvatar]
     );
     return result.insertId;
   } catch (error) {

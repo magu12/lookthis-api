@@ -33,11 +33,11 @@ const authController = require('../controllers/authController');
  *                 description: Password for the new user
  *     responses:
  *       201:
- *         description: User registered successfully
+ *         description: User registered successfully and tokens set in cookies
  *       400:
  *         description: Bad Request
  *       500:
- *          description: Internal Server Error
+ *         description: Internal Server Error
  */
 router.post('/register', authController.registerUser);
 
@@ -63,14 +63,44 @@ router.post('/register', authController.registerUser);
  *                 description: Password of the user
  *     responses:
  *       200:
- *         description: User logged in successfully
+ *         description: User logged in successfully and tokens set in cookies
  *       400:
  *         description: Bad Request
  *       401:
  *         description: Unauthorized
  *       500:
- *          description: Internal Server Error
+ *         description: Internal Server Error
  */
 router.post('/login', authController.loginUser);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Refresh access token using httpOnly cookie
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully
+ *       401:
+ *         description: Invalid or missing refresh token
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post('/refresh', authController.refreshToken);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout user and clear auth cookies
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: User logged out successfully and cookies cleared
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post('/logout', authController.logout);
 
 module.exports = router;
