@@ -93,11 +93,21 @@ const getPostsByUserId = async (req, res) => {
   }
 };
 
+const getAllPosts = async (req, res) => {
+  try {
+    const posts = await postModel.getAllPosts();
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error getting all posts:', error);
+    res.status(500).json({ message: 'Failed to get posts' });
+  }
+};
 
 module.exports = {
   createPost,
   getPostById,
   updatePost,
   deletePost,
-  getPostsByUserId
+  getPostsByUserId,
+  getAllPosts
 };

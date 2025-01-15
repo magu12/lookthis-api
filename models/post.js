@@ -72,11 +72,30 @@ async function deletePost(id) {
   }
 }
 
+async function getAllPosts() {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        posts.*,
+        users.username,
+        users.avatar_url
+      FROM posts 
+      JOIN users ON posts.user_id = users.id
+      ORDER BY posts.created_at DESC
+    `);
+    return rows;
+  } catch (error) {
+    console.error('Error getting all posts:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createPost,
   getPostById,
   getPostsByUserId,
   incrementViews,
   updatePost,
-  deletePost
+  deletePost,
+  getAllPosts
 };

@@ -159,4 +159,42 @@ router.delete('/:id', authMiddleware, postController.deletePost);
   */
 router.get('/user/:userId', postController.getPostsByUserId)
 
+/**
+ * @swagger
+ * /posts:
+ *   get:
+ *     summary: Get all posts
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: List of all posts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   title:
+ *                     type: string
+ *                   short_description:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   user_id:
+ *                     type: integer
+ *                   username:
+ *                     type: string
+ *                   avatar_url:
+ *                     type: string
+ *                   created_at:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Internal Server Error
+ */
+router.get('/', postController.getAllPosts);
+
 module.exports = router;
