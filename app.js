@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts')
 const cookieParser = require('cookie-parser');
+const fs = require('fs');
 
 require('dotenv').config()
 
@@ -29,6 +30,15 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
+
+if (!fs.existsSync('uploads')){
+    fs.mkdirSync('uploads');
+}
+if (!fs.existsSync('uploads/avatars')){
+    fs.mkdirSync('uploads/avatars');
+}
+
+app.use('/uploads', express.static('uploads'));
 
 const swaggerOptions = {
   definition: {
@@ -53,12 +63,7 @@ const swaggerOptions = {
           name: 'accessToken'
         }
       }
-    },
-    security: [
-      {
-        cookieAuth: []
-      }
-    ]
+    }
   },
   apis: ['./routes/*.js'],
 };
