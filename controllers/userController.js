@@ -35,13 +35,11 @@ const updateProfile = async (req, res) => {
     
     let avatar_url = null;
     if (req.file) {
-      // Проверяем наличие HEROKU_APP_NAME - это встроенная переменная Heroku
-      const isHeroku = process.env.HEROKU_APP_NAME !== undefined;
+      const isProduction = process.env.NODE_ENV === 'production';
       
       avatar_url = `${process.env.API_URL}/uploads/avatars/${req.file.filename}`;
       
-      // Если не Heroku, используем SVG аватар
-      if (!isHeroku) {
+      if (!isProduction) {
         console.warn(
           'Warning: File uploaded to localhost. In development environment, ' +
           'file uploads are not persisted. Using default avatar instead.'
@@ -93,8 +91,8 @@ const updatePassword = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   try {
     console.log('getCurrentUser called, user object:', req.user);
-    // req.user содержит { userId: 2 } из токена
-    const userId = req.user.userId; // Убедимся, что это число
+
+    const userId = req.user.userId; 
     
     if (!userId || isNaN(userId)) {
       console.error('Invalid userId from token:', userId);
@@ -108,7 +106,6 @@ const getCurrentUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Не отправляем пароль
     const { password, ...userWithoutPassword } = user;
     
     res.status(200).json(userWithoutPassword);
