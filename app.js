@@ -27,7 +27,9 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}/api`,
+        url: process.env.NODE_ENV === 'production' 
+          ? 'https://lookthis-back-7b143ea18689.herokuapp.com/api'
+          : `http://localhost:${PORT}/api`,
       },
     ],
     components: {
