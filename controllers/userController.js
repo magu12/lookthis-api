@@ -28,17 +28,11 @@ const getUserById = async (req, res) => {
   }
 };
 
-const updateUser = async (req, res) => {
+const updateProfile = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const userIdFromToken = req.user.userId; // Получаем ID из токена
-
-    // Проверяем, что пользователь обновляет свой профиль
-    if (parseInt(userId) !== userIdFromToken) {
-      return res.status(403).json({ message: 'You can only update your own profile' });
-    }
-
+    const userId = req.user.userId; // Получаем ID прямо из токена
     const { username, avatar_url } = req.body;
+
     if (!username || !avatar_url) {
       return res.status(400).json({ message: 'Username and avatar URL are required' });
     }
@@ -47,24 +41,18 @@ const updateUser = async (req, res) => {
     if (!updated) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json({ message: 'User updated successfully' });
+    res.status(200).json({ message: 'Profile updated successfully' });
   } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Failed to update user' });
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Failed to update profile' });
   }
 };
 
-const updateUserPassword = async (req, res) => {
+const updatePassword = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const userIdFromToken = req.user.userId; // Получаем ID из токена
-
-    // Проверяем, что пользователь меняет свой пароль
-    if (parseInt(userId) !== userIdFromToken) {
-      return res.status(403).json({ message: 'You can only change your own password' });
-    }
-
+    const userId = req.user.userId; // Получаем ID прямо из токена
     const { newPassword } = req.body;
+
     if (!newPassword) {
       return res.status(400).json({ message: 'New password is required' });
     }
@@ -73,16 +61,16 @@ const updateUserPassword = async (req, res) => {
     if (!updated) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json({ message: 'User password updated successfully' });
+    res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Error updating user password:', error);
-    res.status(500).json({ message: 'Failed to update user password' });
+    console.error('Error updating password:', error);
+    res.status(500).json({ message: 'Failed to update password' });
   }
 };
 
 module.exports = {
   getUsers,
   getUserById,
-  updateUser,
-  updateUserPassword
+  updateProfile,
+  updatePassword
 };

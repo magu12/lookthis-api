@@ -3,6 +3,18 @@ const tokenModel = require('../models/token');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 часа
+
+// Запускаем периодическую очистку
+setInterval(async () => {
+  try {
+    const deletedCount = await tokenModel.cleanupOldTokens();
+    console.log(`Cleaned up ${deletedCount} old refresh tokens`);
+  } catch (error) {
+    console.error('Error during token cleanup:', error);
+  }
+}, CLEANUP_INTERVAL);
+
 function generateTokens(userId) {
   const accessToken = jwt.sign(
     { userId }, 

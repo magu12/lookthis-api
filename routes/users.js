@@ -48,19 +48,12 @@ router.get('/:id', userController.getUserById);
 
 /**
  * @swagger
- * /users/{id}:
+ * /users/profile:
  *   put:
- *     summary: Update user profile
+ *     summary: Update current user profile
  *     tags: [Users]
  *     security:
  *       - cookieAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID of the user
- *         schema:
- *           type: integer
  *     requestBody:
  *       required: true
  *       content:
@@ -74,33 +67,24 @@ router.get('/:id', userController.getUserById);
  *                 type: string
  *     responses:
  *       200:
- *         description: User updated successfully
+ *         description: Profile updated successfully
  *       400:
  *         description: Bad request
- *       403:
- *         description: Forbidden - can only update own profile
- *       404:
- *         description: User not found
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Internal Server Error
  */
-router.put('/:id', authMiddleware, userController.updateUser);
+router.put('/profile', authMiddleware, userController.updateProfile);
 
 /**
  * @swagger
- * /users/{id}/password:
+ * /users/password:
  *   put:
- *     summary: Update user password
+ *     summary: Update current user password
  *     tags: [Users]
  *     security:
  *       - cookieAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID of the user
- *         schema:
- *           type: integer
  *     requestBody:
  *       required: true
  *       content:
@@ -115,13 +99,11 @@ router.put('/:id', authMiddleware, userController.updateUser);
  *         description: Password updated successfully
  *       400:
  *         description: Bad request
- *       403:
- *         description: Forbidden - can only change own password
- *       404:
- *         description: User not found
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Internal Server Error
  */
-router.put('/:id/password', authMiddleware, userController.updateUserPassword);
+router.put('/password', authMiddleware, userController.updatePassword);
 
 module.exports = router;

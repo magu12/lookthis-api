@@ -35,24 +35,20 @@ const getPostById = async (req, res) => {
 const updatePost = async (req, res) => {
   try {
     const postId = req.params.id;
+    const userId = req.user.userId;
     const { title, short_description, content } = req.body;
-    const userIdFromToken = req.user.userId;
 
     const post = await postModel.getPostById(postId);
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    if (post.user_id !== userIdFromToken) {
-      return res.status(403).json({ message: 'You are not authorized to update this post' });
+    if (post.user_id !== userId) {
+      return res.status(403).json({ message: 'You can only update your own posts' });
     }
 
     const updated = await postModel.updatePost(postId, title, short_description, content);
-    if (updated) {
-      res.status(200).json({ message: 'Post updated successfully' });
-    } else {
-      res.status(404).json({ message: 'Post not found or not updated' });
-    }
+    res.status(200).json({ message: 'Post updated successfully' });
   } catch (error) {
     console.error('Error updating post:', error);
     res.status(500).json({ message: 'Failed to update post' });
