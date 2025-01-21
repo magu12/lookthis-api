@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 const authenticateToken = (req, res, next) => {
-  const accessToken = req.cookies.accessToken;
+  const authHeader = req.headers['authorization'];
+  const accessToken = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!accessToken) {
     return res.status(401).json({ message: 'Authentication required' });

@@ -79,9 +79,14 @@ const registerUser = async (req, res) => {
     
     const { accessToken, refreshToken } = generateTokens(userId);
     await tokenModel.saveRefreshToken(userId, refreshToken);
-    setTokenCookies(res, accessToken, refreshToken);
 
-    res.status(201).json({ message: 'User registered successfully' });
+    res.status(201).json({ 
+      message: 'User registered successfully',
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({ message: 'Failed to register user' });
@@ -107,9 +112,14 @@ const loginUser = async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user.id);
     await tokenModel.saveRefreshToken(user.id, refreshToken);
-    setTokenCookies(res, accessToken, refreshToken);
 
-    res.status(200).json({ message: 'Logged in successfully' });
+    res.status(200).json({ 
+      message: 'Logged in successfully',
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
   } catch (error) {
     console.error('Error logging in user:', error);
     res.status(500).json({ message: 'Failed to log in user' });
@@ -118,39 +128,34 @@ const loginUser = async (req, res) => {
 
 const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
+    const oldRefreshToken = req.body.refreshToken; // Теперь берем из тела запроса
+    if (!oldRefreshToken) {
+      return res.status(401).json({ message: 'Refresh token required' });
+    }
     
-    const savedToken = await tokenModel.findRefreshToken(refreshToken);
+    const savedToken = await tokenModel.findRefreshToken(oldRefreshToken);
     if (!savedToken) {
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
 
-    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, decoded) => {
+    jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET, async (err, decoded) => {
       if (err) {
-        await tokenModel.deleteRefreshToken(refreshToken);
+        await tokenModel.deleteRefreshToken(oldRefreshToken);
         return res.status(401).json({ message: 'Invalid refresh token' });
       }
 
       const { accessToken: newAccessToken, refreshToken: newRefreshToken } = generateTokens(decoded.userId);
       
-      await tokenModel.deleteRefreshToken(refreshToken);
+      await tokenModel.deleteRefreshToken(oldRefreshToken);
       await tokenModel.saveRefreshToken(decoded.userId, newRefreshToken);
 
-      res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 15 * 60 * 1000
+      res.json({ 
+        message: 'Tokens refreshed successfully',
+        tokens: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken
+        }
       });
-
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-
-      res.json({ message: 'Tokens refreshed successfully' });
     });
   } catch (error) {
     res.status(401).json({ message: 'Invalid refresh token' });
@@ -159,13 +164,10 @@ const refreshToken = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
-    
-    await tokenModel.deleteRefreshToken(refreshToken);
-
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-
+    const refreshToken = req.body.refreshToken; // Теперь берем из тела запроса
+    if (refreshToken) {
+      await tokenModel.deleteRefreshToken(refreshToken);
+    }
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Error logging out:', error);
