@@ -14,9 +14,9 @@ require('dotenv').config()
 const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
+  origin: [...(process.env.NODE_ENV === 'production' 
     ? ['https://lookthis-back-7b143ea18689.herokuapp.com', 'https://lookthis.io']
-    : ['http://localhost:3000'],
+    : []), 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Content-Length', 'Content-Type'],
