@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const upload = require('../middleware/upload');
 
 /**
  * @swagger
@@ -17,7 +18,7 @@ const authController = require('../controllers/authController');
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -31,6 +32,10 @@ const authController = require('../controllers/authController');
  *               password:
  *                 type: string
  *                 description: Password for the new user
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: User's avatar image (optional)
  *     responses:
  *       201:
  *         description: User registered successfully and tokens set in cookies
@@ -39,7 +44,7 @@ const authController = require('../controllers/authController');
  *       500:
  *         description: Internal Server Error
  */
-router.post('/register', authController.registerUser);
+router.post('/register', upload.single('avatar'), authController.registerUser);
 
 /**
  * @swagger

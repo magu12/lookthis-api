@@ -49,7 +49,7 @@ function setTokenCookies(res, accessToken, refreshToken) {
 
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, avatar_url } = req.body;
+    const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'Username, email, and password are required' });
@@ -60,9 +60,23 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
+    let avatar_url = null;
+    if (req.file) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      avatar_url = `${process.env.API_URL}/uploads/avatars/${req.file.filename}`;
+      
+      if (!isProduction) {
+        console.warn(
+          'Warning: File uploaded to localhost. In development environment, ' +
+          'file uploads are not persisted. Using default avatar instead.'
+        );
+        avatar_url = null;
+      }
+    }
+
     const userId = await userModel.createUser(username, email, password, avatar_url);
     
-    // Сразу логиним пользователя после регистрации
     const { accessToken, refreshToken } = generateTokens(userId);
     await tokenModel.saveRefreshToken(userId, refreshToken);
     setTokenCookies(res, accessToken, refreshToken);
