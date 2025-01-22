@@ -58,7 +58,7 @@ const upload = require('../middleware/upload');
  *       500:
  *         description: Internal Server Error
  */
-router.post('/register', upload.single('avatar'), authController.registerUser);
+router.post('/register', upload, authController.registerUser);
 
 /**
  * @swagger
