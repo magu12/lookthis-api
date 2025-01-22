@@ -38,7 +38,21 @@ const upload = require('../middleware/upload');
  *                 description: User's avatar image (optional)
  *     responses:
  *       201:
- *         description: User registered successfully and tokens set in cookies
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 tokens:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                     refreshToken:
+ *                       type: string
  *       400:
  *         description: Bad Request
  *       500:
@@ -68,7 +82,21 @@ router.post('/register', upload.single('avatar'), authController.registerUser);
  *                 description: Password of the user
  *     responses:
  *       200:
- *         description: User logged in successfully and tokens set in cookies
+ *         description: User logged in successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 tokens:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                     refreshToken:
+ *                       type: string
  *       400:
  *         description: Bad Request
  *       401:
@@ -82,11 +110,34 @@ router.post('/login', authController.loginUser);
  * @swagger
  * /auth/refresh:
  *   post:
- *     summary: Refresh access token using httpOnly cookie
+ *     summary: Refresh access token
  *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Tokens refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 tokens:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                     refreshToken:
+ *                       type: string
  *       401:
  *         description: Invalid or missing refresh token
  *       500:
@@ -98,11 +149,20 @@ router.post('/refresh', authController.refreshToken);
  * @swagger
  * /auth/logout:
  *   post:
- *     summary: Logout user and clear auth cookies
+ *     summary: Logout user
  *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
  *     responses:
  *       200:
- *         description: User logged out successfully and cookies cleared
+ *         description: User logged out successfully
  *       500:
  *         description: Internal Server Error
  */
