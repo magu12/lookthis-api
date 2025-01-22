@@ -45,19 +45,31 @@ db.query('SELECT 1')
 const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://lookthis-front-0d9b3ca95599.herokuapp.com', 'https://lookthis.io', 'http://localhost:3000']
-    : 'http://localhost:3000',
+  origin: function(origin, callback) {
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? ['https://lookthis-front-0d9b3ca95599.herokuapp.com', 'https://lookthis.io', 'http://localhost:3000']
+      : ['http://localhost:3000'];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Set-Cookie', 'Content-Length', 'Content-Type'],
   optionsSuccessStatus: 200,
-  maxAge: 86400
+  maxAge: 86400,
+  preflightContinue: false
 };
 
-app.use(cookieParser(process.env.COOKIE_SECRET || 'your-secret-key'));
 app.use(cors(corsOptions));
+app.use(cookieParser(process.env.COOKIE_SECRET || 'your-secret-key'));
 app.use(express.json());
 
 app.use((req, res, next) => {
