@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const uploadMiddleware = require('../middleware/upload');
 
 /**
  * @swagger
@@ -99,7 +99,11 @@ router.get('/:id', userController.getUserById);
  *       500:
  *         description: Internal Server Error
  */
-router.put('/profile', authMiddleware, upload.single('avatar'), userController.updateProfile);
+router.put('/profile', 
+  authMiddleware,
+  uploadMiddleware,
+  userController.updateProfile
+);
 
 /**
  * @swagger
