@@ -76,7 +76,7 @@ router.get('/:id', userController.getUserById);
  *     security:
  *       - cookieAuth: []
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         multipart/form-data:
  *           schema:
@@ -84,13 +84,11 @@ router.get('/:id', userController.getUserById);
  *             properties:
  *               username:
  *                 type: string
- *                 description: User's new username
+ *                 description: User's new username (optional)
  *               avatar:
  *                 type: string
  *                 format: binary
- *                 description: User's new avatar image
- *             required:
- *               - username
+ *                 description: User's new avatar image (optional)
  *     responses:
  *       200:
  *         description: Profile updated successfully

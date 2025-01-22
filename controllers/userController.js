@@ -31,32 +31,36 @@ const getUserById = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { username } = req.body;
+    const updates = {};
+
+    // Only add username to updates if it's provided
+    if (req.body.username) {
+      updates.username = req.body.username;
+    }
     
-    let avatar_url = null;
+    // Handle avatar upload if provided
     if (req.file) {
       const isProduction = process.env.NODE_ENV === 'production';
       
-      avatar_url = `${process.env.API_URL}/uploads/avatars/${req.file.filename}`;
+      updates.avatar_url = `${process.env.API_URL}/uploads/avatars/${req.file.filename}`;
       
       if (!isProduction) {
         console.warn(
           'Warning: File uploaded to localhost. In development environment, ' +
           'file uploads are not persisted. Using default avatar instead.'
         );
-        avatar_url = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIxMDAiIGZpbGw9IiNFMkU4RjAiLz48Y2lyY2xlIGN4PSIxMDAiIGN5PSI4MCIgcj0iNDAiIGZpbGw9IiM5NEEzQjgiLz48cGF0aCBkPSJNMTYwIDE4MEExMDAgMTAwIDAgMCAxIDQwIDE4MEMzOS45OTk5IDE0MCA2NS45OTk5IDExMCAxMDAgMTEwQzEzNCAxMTAgMTYwIDE0MCAxNjAgMTgwWiIgZmlsbD0iIzk0QTNCOCIvPjwvc3ZnPg==';
+        updates.avatar_url = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIxMDAiIGZpbGw9IiNFMkU4RjAiLz48Y2lyY2xlIGN4PSIxMDAiIGN5PSI4MCIgcj0iNDAiIGZpbGw9IiM5NEEzQjgiLz48cGF0aCBkPSJNMTYwIDE4MEExMDAgMTAwIDAgMCAxIDQwIDE4MEMzOS45OTk5IDE0MCA2NS45OTk5IDExMCAxMDAgMTEwQzEzNCAxMTAgMTYwIDE0MCAxNjAgMTgwWiIgZmlsbD0iIzk0QTNCOCIvPjwvc3ZnPg==';
       }
+    } else if (req.body.avatar_url) {
+      updates.avatar_url = req.body.avatar_url;
     }
 
-    if (!username) {
-      return res.status(400).json({ message: 'Username is required' });
+    // Only proceed with update if there are changes to make
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No updates provided' });
     }
     
-    const updated = await userModel.updateUser(
-      userId, 
-      username, 
-      avatar_url || req.body.avatar_url
-    );
+    const updated = await userModel.updateUser(userId, updates);
 
     if (!updated) {
       return res.status(404).json({ message: 'User not found' });

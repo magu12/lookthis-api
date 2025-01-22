@@ -53,12 +53,17 @@ async function getAllUsers() {
   }
 }
 
-
-async function updateUser(id, username, avatar_url) {
+async function updateUser(id, updates) {
   try {
+    const setClause = Object.entries(updates)
+      .map(([key, _]) => `${key} = ?`)
+      .join(', ');
+    
+    const values = [...Object.values(updates), id];
+    
     const [result] = await db.query(
-      'UPDATE users SET username = ?, avatar_url = ? WHERE id = ?',
-      [username, avatar_url, id]
+      `UPDATE users SET ${setClause} WHERE id = ?`,
+      values
     );
     return result.affectedRows > 0;
   } catch (error) {
@@ -66,7 +71,6 @@ async function updateUser(id, username, avatar_url) {
     throw error;
   }
 }
-
 
 async function updateUserPassword(id, newPassword) {
   try {
@@ -81,7 +85,6 @@ async function updateUserPassword(id, newPassword) {
     throw error;
   }
 }
-
 
 module.exports = {
   createUser,
