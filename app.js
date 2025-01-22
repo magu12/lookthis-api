@@ -1,3 +1,8 @@
+require('dotenv').config();
+
+console.log('Starting application...');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -8,7 +13,34 @@ const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts')
 const cookieParser = require('cookie-parser');
 
-require('dotenv').config()
+// Log all environment variables (except secrets)
+console.log('Checking environment variables...');
+const safeEnvVars = [
+  'NODE_ENV',
+  'PORT',
+  'DB_HOST',
+  'DB_USER',
+  'DB_NAME',
+  'CLOUDINARY_CLOUD_NAME'
+];
+
+safeEnvVars.forEach(varName => {
+  console.log(`${varName}: ${process.env[varName] ? 'Set' : 'Not set'}`);
+});
+
+// Initialize database connection
+const db = require('./config/db');
+console.log('Initializing database connection...');
+
+// Test database connection
+db.query('SELECT 1')
+  .then(() => {
+    console.log('Database connection successful');
+  })
+  .catch(err => {
+    console.error('Database connection failed:', err);
+    process.exit(1);
+  });
 
 const PORT = process.env.PORT || 5000;
 
