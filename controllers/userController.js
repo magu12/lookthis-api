@@ -1,5 +1,7 @@
 const userModel = require('../models/user');
 const postModel = require('../models/post');
+const cloudinary = require('../config/cloudinary');
+const { Readable } = require('stream');
 
 const getUsers = async (req, res) => {
   try {
@@ -28,43 +30,57 @@ const getUserById = async (req, res) => {
   }
 };
 
+async function uploadToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const writeStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'avatars',
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    
+    const readStream = new Readable({
+      read() {
+        this.push(buffer);
+        this.push(null);
+      }
+    });
+    
+    readStream.pipe(writeStream);
+  });
+}
+
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
     const updates = {};
 
-    // Only add username to updates if it's provided
     if (req.body.username) {
       updates.username = req.body.username;
     }
     
-    // Handle avatar upload if provided
     if (req.file) {
-      const isProduction = process.env.NODE_ENV === 'production';
-      
-      updates.avatar_url = `${process.env.API_URL}/uploads/avatars/${req.file.filename}`;
-      
-      if (!isProduction) {
-        console.warn(
-          'Warning: File uploaded to localhost. In development environment, ' +
-          'file uploads are not persisted. Using default avatar instead.'
-        );
-        updates.avatar_url = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIxMDAiIGZpbGw9IiNFMkU4RjAiLz48Y2lyY2xlIGN4PSIxMDAiIGN5PSI4MCIgcj0iNDAiIGZpbGw9IiM5NEEzQjgiLz48cGF0aCBkPSJNMTYwIDE4MEExMDAgMTAwIDAgMCAxIDQwIDE4MEMzOS45OTk5IDE0MCA2NS45OTk5IDExMCAxMDAgMTEwQzEzNCAxMTAgMTYwIDE0MCAxNjAgMTgwWiIgZmlsbD0iIzk0QTNCOCIvPjwvc3ZnPg==';
+      try {
+        const result = await uploadToCloudinary(req.file.buffer);
+        updates.avatar_url = result.secure_url;
+      } catch (uploadError) {
+        console.error('Error uploading to Cloudinary:', uploadError);
+        return res.status(500).json({ message: 'Failed to upload image' });
       }
-    } else if (req.body.avatar_url) {
-      updates.avatar_url = req.body.avatar_url;
     }
 
-    // Only proceed with update if there are changes to make
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ message: 'No updates provided' });
     }
     
     const updated = await userModel.updateUser(userId, updates);
-
     if (!updated) {
       return res.status(404).json({ message: 'User not found' });
     }
+    
     res.status(200).json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Error updating profile:', error);

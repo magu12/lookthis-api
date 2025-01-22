@@ -2,6 +2,8 @@ const userModel = require('../models/user');
 const tokenModel = require('../models/token');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const cloudinary = require('../config/cloudinary');
+const { Readable } = require('stream');
 
 const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 часа
 
@@ -47,6 +49,29 @@ function setTokenCookies(res, accessToken, refreshToken) {
   });
 }
 
+async function uploadToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const writeStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'avatars',
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    
+    const readStream = new Readable({
+      read() {
+        this.push(buffer);
+        this.push(null);
+      }
+    });
+    
+    readStream.pipe(writeStream);
+  });
+}
+
 const registerUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -62,16 +87,12 @@ const registerUser = async (req, res) => {
 
     let avatar_url = null;
     if (req.file) {
-      const isProduction = process.env.NODE_ENV === 'production';
-      
-      avatar_url = `${process.env.API_URL}/uploads/avatars/${req.file.filename}`;
-      
-      if (!isProduction) {
-        console.warn(
-          'Warning: File uploaded to localhost. In development environment, ' +
-          'file uploads are not persisted. Using default avatar instead.'
-        );
-        avatar_url = null;
+      try {
+        const result = await uploadToCloudinary(req.file.buffer);
+        avatar_url = result.secure_url;
+      } catch (uploadError) {
+        console.error('Error uploading to Cloudinary:', uploadError);
+        return res.status(500).json({ message: 'Failed to upload avatar' });
       }
     }
 
