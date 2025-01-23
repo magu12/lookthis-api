@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/auth');
-const uploadMiddleware = require('../middleware/upload');
+const { uploadAvatar } = require('../middleware/upload');
 
 /**
  * @swagger
@@ -76,7 +76,7 @@ router.get('/:id', userController.getUserById);
  *     security:
  *       - cookieAuth: []
  *     requestBody:
- *       required: false
+ *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
@@ -84,7 +84,7 @@ router.get('/:id', userController.getUserById);
  *             properties:
  *               username:
  *                 type: string
- *                 description: User's new username (optional)
+ *                 description: New username (optional)
  *               avatar:
  *                 type: string
  *                 format: binary
@@ -101,7 +101,7 @@ router.get('/:id', userController.getUserById);
  */
 router.put('/profile', 
   authMiddleware,
-  uploadMiddleware,
+  uploadAvatar,
   userController.updateProfile
 );
 
