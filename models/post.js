@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/db');
 
 const createPost = async (user_id, title, short_description, content, featured_image_url = null) => {
   console.log('[POST MODEL] Starting database transaction for post creation:', {
