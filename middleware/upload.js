@@ -27,7 +27,7 @@ const uploadAvatar = multer(uploadConfig).single('avatar');
 const uploadFeaturedImage = multer(uploadConfig).single('featured_image');
 
 // Creating wrapper middleware for error handling
-const handleUploadError = (req, res, next, uploadFn) => {
+const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
   uploadFn(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       console.log('Multer error:', err);
@@ -45,7 +45,7 @@ const handleUploadError = (req, res, next, uploadFn) => {
       });
     }
     
-    if (!req.file) {
+    if (!req.file && !isOptional) {
       console.log('No file uploaded');
       return res.status(400).json({
         message: 'Please upload a file',
@@ -57,11 +57,11 @@ const handleUploadError = (req, res, next, uploadFn) => {
   });
 };
 
-const wrapUploadMiddleware = (uploadFn) => {
-  return (req, res, next) => handleUploadError(req, res, next, uploadFn);
+const wrapUploadMiddleware = (uploadFn, isOptional = false) => {
+  return (req, res, next) => handleUploadError(req, res, next, uploadFn, isOptional);
 };
 
 module.exports = {
-  uploadAvatar: wrapUploadMiddleware(uploadAvatar),
+  uploadAvatar: wrapUploadMiddleware(uploadAvatar, true),
   uploadFeaturedImage: wrapUploadMiddleware(uploadFeaturedImage)
 }; 
