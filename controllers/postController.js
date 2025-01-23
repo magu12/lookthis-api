@@ -446,8 +446,10 @@ const updatePost = async (req, res) => {
       return res.status(403).json({ message: 'You can only update your own posts' });
     }
 
-    // Санитизация HTML
-    const sanitizedContent = sanitizeHtml(content, sanitizeOptions);
+    // Используем существующие значения, если новые не предоставлены
+    const updatedTitle = title !== undefined ? title : post.title;
+    const updatedShortDescription = short_description !== undefined ? short_description : post.short_description;
+    const updatedContent = content !== undefined ? sanitizeHtml(content, sanitizeOptions) : post.content;
 
     let featured_image_url = post.featured_image_url;
     if (req.file) {
@@ -458,7 +460,13 @@ const updatePost = async (req, res) => {
       );
     }
 
-    const updated = await postModel.updatePost(postId, title, short_description, sanitizedContent, featured_image_url);
+    const updated = await postModel.updatePost(
+      postId, 
+      updatedTitle, 
+      updatedShortDescription, 
+      updatedContent, 
+      featured_image_url
+    );
     res.status(200).json({ message: 'Post updated successfully' });
   } catch (error) {
     console.error('Error updating post:', error);

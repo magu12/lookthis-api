@@ -168,6 +168,19 @@ router.get('/:id', postController.getPostById);
  *                  type: string
  *                  format: binary
  *                  description: Featured image file for the post
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Title of the post
+ *               short_description:
+ *                  type: string
+ *                  description: Short description of the post
+ *               content:
+ *                  type: string
+ *                  description: Content of the post
  *     responses:
  *       200:
  *         description: Post updated successfully
@@ -180,7 +193,17 @@ router.get('/:id', postController.getPostById);
  *       500:
  *          description: Internal Server Error
  */
-router.put('/:id', authMiddleware, uploadFeaturedImage, postController.updatePost);
+router.put('/:id', 
+  authMiddleware, 
+  (req, res, next) => {
+    if (req.is('multipart/form-data')) {
+      uploadFeaturedImage(req, res, next);
+    } else {
+      next();
+    }
+  }, 
+  postController.updatePost
+);
 
 /**
  * @swagger
