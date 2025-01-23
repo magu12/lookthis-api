@@ -32,6 +32,13 @@ const sanitizeOptions = {
  */
 async function uploadToCloudinary(buffer, mimeType, folder) {
   try {
+    console.log('[CLOUDINARY] Starting upload:', {
+      mimeType,
+      folder,
+      bufferSize: buffer.length,
+      bufferValid: Buffer.isBuffer(buffer)
+    });
+
     // Add timeout promise
     const uploadPromise = cloudinary.uploader.upload(
       `data:${mimeType};base64,${buffer.toString('base64')}`,
@@ -49,17 +56,39 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
       }
     );
 
+    console.log('[CLOUDINARY] Upload promise created');
+
     // Race between upload and timeout
     const result = await Promise.race([
-      uploadPromise,
+      uploadPromise.then(res => {
+        console.log('[CLOUDINARY] Upload successful:', {
+          publicId: res.public_id,
+          format: res.format,
+          size: res.bytes,
+          url: res.secure_url
+        });
+        return res;
+      }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout')), 20000)
+        setTimeout(() => {
+          console.error('[CLOUDINARY] Upload timeout reached');
+          reject(new Error('Upload timeout'));
+        }, 20000)
       )
     ]);
 
     return result.secure_url;
   } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
+    console.error('[CLOUDINARY] Upload error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      details: error.http_code ? {
+        http_code: error.http_code,
+        error_info: error.error?.message
+      } : undefined
+    });
+
     if (error.message === 'Upload timeout') {
       throw new Error('Image upload timed out. Please try again.');
     }
@@ -70,17 +99,20 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
 // Обработчик загрузки изображений для контента
 const uploadContentImage = async (req, res) => {
   try {
-    console.log('Upload request received:', {
+    console.log('[CONTENT UPLOAD] Request received:', {
       headers: req.headers,
       fileInfo: req.file ? {
         fieldname: req.file.fieldname,
         mimetype: req.file.mimetype,
-        size: req.file.size
+        size: req.file.size,
+        originalname: req.file.originalname,
+        encoding: req.file.encoding,
+        bufferLength: req.file.buffer ? req.file.buffer.length : 0
       } : 'No file'
     });
 
     if (!req.file) {
-      console.error('No file in request');
+      console.error('[CONTENT UPLOAD] No file in request');
       return res.status(400).json({ 
         message: 'No image file provided',
         error: 'FILE_MISSING'
@@ -88,30 +120,61 @@ const uploadContentImage = async (req, res) => {
     }
 
     if (!req.file.buffer || req.file.buffer.length === 0) {
-      console.error('Empty file buffer');
+      console.error('[CONTENT UPLOAD] Empty file buffer', {
+        file: req.file
+      });
       return res.status(400).json({ 
         message: 'Empty file provided',
         error: 'EMPTY_FILE'
       });
     }
 
-    console.log('Starting Cloudinary upload...');
+    console.log('[CONTENT UPLOAD] Starting Cloudinary upload...', {
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      originalName: req.file.originalname
+    });
+
     const imageUrl = await uploadToCloudinary(
       req.file.buffer,
       req.file.mimetype,
       'post_content_images'
     );
-    console.log('Cloudinary upload successful:', imageUrl);
 
-    res.status(200).json({ url: imageUrl });
+    console.log('[CONTENT UPLOAD] Cloudinary upload successful:', {
+      url: imageUrl,
+      originalName: req.file.originalname
+    });
+
+    res.status(200).json({ 
+      url: imageUrl,
+      originalName: req.file.originalname
+    });
   } catch (error) {
-    console.error('Error in uploadContentImage:', error);
+    console.error('[CONTENT UPLOAD] Error:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name,
+      cloudinaryError: error.http_code ? {
+        code: error.http_code,
+        message: error.error?.message
+      } : undefined
+    });
+    
     if (error.message.includes('timeout')) {
       return res.status(504).json({ 
         message: 'Upload timeout',
         error: 'UPLOAD_TIMEOUT'
       });
     }
+
+    if (error.http_code) {
+      return res.status(error.http_code).json({
+        message: 'Cloudinary error',
+        error: error.message
+      });
+    }
+
     res.status(500).json({ 
       message: 'Failed to upload image',
       error: error.message
