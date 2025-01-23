@@ -26,6 +26,9 @@ const uploadAvatar = multer(uploadConfig).single('avatar');
 // Middleware for featured image upload
 const uploadFeaturedImage = multer(uploadConfig).single('featured_image');
 
+// Middleware for content image upload
+const uploadContentImage = multer(uploadConfig).single('content_image');
+
 // Creating wrapper middleware for error handling
 const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
   uploadFn(req, res, function (err) {
@@ -63,5 +66,6 @@ const wrapUploadMiddleware = (uploadFn, isOptional = false) => {
 
 module.exports = {
   uploadAvatar: wrapUploadMiddleware(uploadAvatar, true),
-  uploadFeaturedImage: wrapUploadMiddleware(uploadFeaturedImage)
+  uploadFeaturedImage: wrapUploadMiddleware(uploadFeaturedImage),
+  uploadContentImage: wrapUploadMiddleware(uploadContentImage)
 }; 

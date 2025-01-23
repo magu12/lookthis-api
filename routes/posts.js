@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const postController = require('../controllers/postController');
 const authMiddleware = require('../middleware/auth');
-const { uploadFeaturedImage } = require('../middleware/upload');
+const { uploadFeaturedImage, uploadContentImage } = require('../middleware/upload');
 
 /**
  * @swagger
@@ -273,6 +273,6 @@ router.get('/', postController.getAllPosts);
  *       500:
  *         description: Internal Server Error
  */
-router.post('/upload-content-image', authMiddleware, uploadFeaturedImage, postController.uploadContentImage);
+router.post('/upload-content-image', authMiddleware, uploadContentImage, postController.uploadContentImage);
 
 module.exports = router;

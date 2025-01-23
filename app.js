@@ -47,13 +47,18 @@ const PORT = process.env.PORT || 5000;
 const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? ['https://lookthis-front-0d9b3ca95599.herokuapp.com', 'https://lookthis.io', 'http://localhost:3000']
+      ? [
+          'https://lookthis-front-0d9b3ca95599.herokuapp.com', 
+          'https://lookthis.io', 
+          'http://localhost:3000',
+          'https://lookthis-back-7b143ea18689.herokuapp.com'
+        ]
       : ['http://localhost:3000'];
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
