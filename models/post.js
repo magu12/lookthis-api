@@ -1,10 +1,10 @@
 const db = require('../config/db');
 
-async function createPost(user_id, title, short_description, content) {
+async function createPost(user_id, title, short_description, content, featured_image_url) {
   try {
     const [result] = await db.query(
-      'INSERT INTO posts (user_id, title, short_description, content) VALUES (?, ?, ?, ?)',
-      [user_id, title, short_description, content]
+      'INSERT INTO posts (user_id, title, short_description, content, featured_image_url) VALUES (?, ?, ?, ?, ?)',
+      [user_id, title, short_description, content, featured_image_url]
     );
     return result.insertId;
   } catch (error) {
@@ -49,11 +49,11 @@ async function incrementViews(id) {
   }
 }
 
-async function updatePost(id, title, short_description, content) {
+async function updatePost(id, title, short_description, content, featured_image_url) {
   try {
     const [result] = await db.query(
-      'UPDATE posts SET title = ?, short_description = ?, content = ? WHERE id = ?',
-      [title, short_description, content, id]
+      'UPDATE posts SET title = ?, short_description = ?, content = ?, featured_image_url = ? WHERE id = ?',
+      [title, short_description, content, featured_image_url, id]
     );
     return result.affectedRows > 0;
   } catch (error) {

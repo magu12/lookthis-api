@@ -12,17 +12,23 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ 
+const uploadConfig = { 
   storage: storage,
   fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB max size
   }
-}).single('avatar');
+};
+
+// Middleware for avatar upload
+const uploadAvatar = multer(uploadConfig).single('avatar');
+
+// Middleware for featured image upload
+const uploadFeaturedImage = multer(uploadConfig).single('featured_image');
 
 // Creating wrapper middleware for error handling
-const uploadMiddleware = (req, res, next) => {
-  upload(req, res, function (err) {
+const handleUploadError = (req, res, next, uploadFn) => {
+  uploadFn(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       console.log('Multer error:', err);
       return res.status(400).json({
@@ -39,4 +45,15 @@ const uploadMiddleware = (req, res, next) => {
   });
 };
 
-module.exports = uploadMiddleware; 
+const avatarUploadMiddleware = (req, res, next) => {
+  handleUploadError(req, res, next, uploadAvatar);
+};
+
+const featuredImageUploadMiddleware = (req, res, next) => {
+  handleUploadError(req, res, next, uploadFeaturedImage);
+};
+
+module.exports = {
+  avatarUploadMiddleware,
+  featuredImageUploadMiddleware
+}; 

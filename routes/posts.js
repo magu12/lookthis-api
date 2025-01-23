@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const postController = require('../controllers/postController');
 const authMiddleware = require('../middleware/auth');
+const { featuredImageUploadMiddleware } = require('../middleware/upload');
 
 /**
  * @swagger
@@ -20,7 +21,7 @@ const authMiddleware = require('../middleware/auth');
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -33,6 +34,14 @@ const authMiddleware = require('../middleware/auth');
  *               content:
  *                  type: string
  *                  description: Content of the post
+ *               featured_image:
+ *                  type: string
+ *                  format: binary
+ *                  description: Featured image file for the post
+ *             required:
+ *               - title
+ *               - short_description
+ *               - content
  *     responses:
  *       201:
  *         description: Post created successfully
@@ -41,7 +50,7 @@ const authMiddleware = require('../middleware/auth');
  *       500:
  *          description: Internal Server Error
  */
-router.post('/', authMiddleware, postController.createPost);
+router.post('/', authMiddleware, featuredImageUploadMiddleware, postController.createPost);
 
 /**
   * @swagger
@@ -59,6 +68,29 @@ router.post('/', authMiddleware, postController.createPost);
   *     responses:
   *       200:
   *         description: Successful response
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: object
+  *               properties:
+  *                 id:
+  *                   type: integer
+  *                 title:
+  *                   type: string
+  *                 short_description:
+  *                   type: string
+  *                 content:
+  *                   type: string
+  *                 featured_image_url:
+  *                   type: string
+  *                   description: URL of the featured image
+  *                 user_id:
+  *                   type: integer
+  *                 views:
+  *                   type: integer
+  *                 publication_date:
+  *                   type: string
+  *                   format: date-time
   *       404:
   *         description: Post not found
   *       500:
@@ -84,7 +116,7 @@ router.get('/:id', postController.getPostById);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -97,6 +129,10 @@ router.get('/:id', postController.getPostById);
  *               content:
  *                  type: string
  *                  description: Content of the post
+ *               featured_image:
+ *                  type: string
+ *                  format: binary
+ *                  description: Featured image file for the post
  *     responses:
  *       200:
  *         description: Post updated successfully
@@ -109,7 +145,7 @@ router.get('/:id', postController.getPostById);
  *       500:
  *          description: Internal Server Error
  */
-router.put('/:id', authMiddleware, postController.updatePost);
+router.put('/:id', authMiddleware, featuredImageUploadMiddleware, postController.updatePost);
 
 /**
  * @swagger
@@ -183,18 +219,60 @@ router.get('/user/:userId', postController.getPostsByUserId)
  *                     type: string
  *                   content:
  *                     type: string
+ *                   featured_image_url:
+ *                     type: string
+ *                     description: URL of the featured image
  *                   user_id:
  *                     type: integer
  *                   username:
  *                     type: string
  *                   avatar_url:
  *                     type: string
- *                   created_at:
+ *                   views:
+ *                     type: integer
+ *                   publication_date:
  *                     type: string
  *                     format: date-time
  *       500:
  *         description: Internal Server Error
  */
 router.get('/', postController.getAllPosts);
+
+/**
+ * @swagger
+ * /posts/upload-content-image:
+ *   post:
+ *     summary: Upload an image for post content
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content_image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   description: URL of the uploaded image
+ *       400:
+ *         description: Bad Request
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post('/upload-content-image', authMiddleware, featuredImageUploadMiddleware, postController.uploadContentImage);
 
 module.exports = router;
