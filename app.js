@@ -53,22 +53,36 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Set-Cookie', 'Content-Length', 'Content-Type'],
   optionsSuccessStatus: 200,
   maxAge: 86400,
   preflightContinue: false
 };
 
+// Apply CORS before any other middleware
 app.use(cors(corsOptions));
+
+// Error handling for CORS
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    console.error('CORS Error:', err.message);
+    return res.status(403).json({
+      error: 'CORS not allowed for this origin'
+    });
+  }
+  next(err);
+});
+
 app.use(cookieParser(process.env.COOKIE_SECRET || 'your-secret-key'));
 app.use(express.json());
 

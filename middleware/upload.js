@@ -33,27 +33,35 @@ const handleUploadError = (req, res, next, uploadFn) => {
       console.log('Multer error:', err);
       return res.status(400).json({
         message: 'File upload error',
-        error: err.message
+        error: err.message,
+        code: 'MULTER_ERROR'
       });
     } else if (err) {
-      console.log('Unknown error:', err);
+      console.log('Upload error:', err);
       return res.status(400).json({
-        message: err.message
+        message: 'File upload failed',
+        error: err.message,
+        code: 'UPLOAD_ERROR'
       });
     }
+    
+    if (!req.file) {
+      console.log('No file uploaded');
+      return res.status(400).json({
+        message: 'Please upload a file',
+        code: 'NO_FILE'
+      });
+    }
+    
     next();
   });
 };
 
-const avatarUploadMiddleware = (req, res, next) => {
-  handleUploadError(req, res, next, uploadAvatar);
-};
-
-const featuredImageUploadMiddleware = (req, res, next) => {
-  handleUploadError(req, res, next, uploadFeaturedImage);
+const wrapUploadMiddleware = (uploadFn) => {
+  return (req, res, next) => handleUploadError(req, res, next, uploadFn);
 };
 
 module.exports = {
-  avatarUploadMiddleware,
-  featuredImageUploadMiddleware
+  uploadAvatar: wrapUploadMiddleware(uploadAvatar),
+  uploadFeaturedImage: wrapUploadMiddleware(uploadFeaturedImage)
 }; 
