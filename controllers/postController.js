@@ -36,7 +36,14 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
       `data:${mimeType};base64,${buffer.toString('base64')}`,
       {
         folder,
-        resource_type: 'auto'
+        resource_type: 'auto',
+        quality: 'auto:good',
+        fetch_format: 'auto',
+        flags: 'lossy',
+        transformation: [
+          { width: 2000, crop: 'limit' },
+          { quality: 'auto:good' }
+        ]
       }
     );
     return result.secure_url;
@@ -62,7 +69,7 @@ const uploadContentImage = async (req, res) => {
     res.status(200).json({ url: imageUrl });
   } catch (error) {
     console.error('Error uploading content image:', error);
-    res.status(500).json({ message: 'Failed to upload image' });
+    res.status(500).json({ message: 'Failed to upload image', error: error.message });
   }
 };
 
