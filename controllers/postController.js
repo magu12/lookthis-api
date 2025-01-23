@@ -1,6 +1,7 @@
 const postModel = require('../models/post');
 const cloudinary = require('../config/cloudinary');
 const sanitizeHtml = require('sanitize-html');
+const { Readable } = require('stream');
 
 // Конфигурация для sanitize-html
 const sanitizeOptions = {
@@ -39,45 +40,44 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
       bufferValid: Buffer.isBuffer(buffer)
     });
 
-    // Add timeout promise
-    const uploadPromise = cloudinary.uploader.upload(
-      `data:${mimeType};base64,${buffer.toString('base64')}`,
-      {
-        folder,
-        resource_type: 'auto',
-        quality: 'auto:good',
-        fetch_format: 'auto',
-        flags: 'lossy',
-        transformation: [
-          { width: 2000, crop: 'limit' },
-          { quality: 'auto:good', fetch_format: 'auto' }
-        ],
-        timeout: 20000 // 20 second timeout for Cloudinary
-      }
-    );
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'auto',
+          quality: 'auto:good',
+          fetch_format: 'auto',
+          flags: 'lossy',
+          transformation: [
+            { width: 2000, crop: 'limit' },
+            { quality: 'auto:good', fetch_format: 'auto' }
+          ],
+          timeout: 10000
+        },
+        (error, result) => {
+          if (error) {
+            console.error('[CLOUDINARY] Upload stream error:', error);
+            reject(error);
+            return;
+          }
+          console.log('[CLOUDINARY] Upload successful:', {
+            publicId: result.public_id,
+            format: result.format,
+            size: result.bytes,
+            url: result.secure_url
+          });
+          resolve(result.secure_url);
+        }
+      );
 
-    console.log('[CLOUDINARY] Upload promise created');
+      // Create a readable stream from buffer
+      const stream = new Readable();
+      stream.push(buffer);
+      stream.push(null);
 
-    // Race between upload and timeout
-    const result = await Promise.race([
-      uploadPromise.then(res => {
-        console.log('[CLOUDINARY] Upload successful:', {
-          publicId: res.public_id,
-          format: res.format,
-          size: res.bytes,
-          url: res.secure_url
-        });
-        return res;
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => {
-          console.error('[CLOUDINARY] Upload timeout reached');
-          reject(new Error('Upload timeout'));
-        }, 20000)
-      )
-    ]);
-
-    return result.secure_url;
+      // Pipe it to the upload stream
+      stream.pipe(uploadStream);
+    });
   } catch (error) {
     console.error('[CLOUDINARY] Upload error:', {
       message: error.message,
@@ -88,10 +88,6 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
         error_info: error.error?.message
       } : undefined
     });
-
-    if (error.message === 'Upload timeout') {
-      throw new Error('Image upload timed out. Please try again.');
-    }
     throw error;
   }
 }

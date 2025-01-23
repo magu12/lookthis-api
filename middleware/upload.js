@@ -31,7 +31,8 @@ const uploadConfig = {
   limits: {
     fileSize: 10 * 1024 * 1024, // увеличим до 10MB
     fieldSize: 10 * 1024 * 1024, // увеличим до 10MB
-    files: 1
+    files: 1,
+    parts: 2 // fieldname + file
   }
 };
 
@@ -46,6 +47,8 @@ const uploadContentImage = multer(uploadConfig).single('content_image');
 
 // Creating wrapper middleware for error handling
 const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
+  let uploadFinished = false;
+
   console.log('[UPLOAD MIDDLEWARE] Starting upload process:', {
     url: req.url,
     method: req.method,
@@ -56,16 +59,19 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
   
   // Set a timeout for the upload
   const uploadTimeout = setTimeout(() => {
-    console.error('[UPLOAD MIDDLEWARE] Upload timeout reached');
-    if (!res.headersSent) {
-      res.status(408).json({
-        message: 'Upload timeout reached',
-        code: 'UPLOAD_TIMEOUT'
-      });
+    if (!uploadFinished) {
+      console.error('[UPLOAD MIDDLEWARE] Upload timeout reached');
+      if (!res.headersSent) {
+        res.status(408).json({
+          message: 'Upload timeout reached',
+          code: 'UPLOAD_TIMEOUT'
+        });
+      }
     }
-  }, 25000);
+  }, 10000); // уменьшим до 10 секунд
 
   uploadFn(req, res, function (err) {
+    uploadFinished = true;
     console.log('[UPLOAD MIDDLEWARE] Multer processing completed');
     clearTimeout(uploadTimeout);
 
