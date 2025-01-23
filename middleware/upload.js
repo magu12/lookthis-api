@@ -16,7 +16,8 @@ const uploadConfig = {
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 3 * 1024 * 1024 // 3MB max size
+    fileSize: 3 * 1024 * 1024, // 3MB max size
+    fieldSize: 3 * 1024 * 1024 // 3MB max field size
   }
 };
 
@@ -31,9 +32,28 @@ const uploadContentImage = multer(uploadConfig).single('content_image');
 
 // Creating wrapper middleware for error handling
 const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
+  // Set a timeout for the upload
+  const uploadTimeout = setTimeout(() => {
+    console.error('Upload timeout reached');
+    res.status(408).json({
+      message: 'Upload timeout reached',
+      code: 'UPLOAD_TIMEOUT'
+    });
+  }, 30000); // 30 seconds timeout
+
   uploadFn(req, res, function (err) {
+    // Clear the timeout since upload completed (either success or error)
+    clearTimeout(uploadTimeout);
+
     if (err instanceof multer.MulterError) {
       console.log('Multer error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          message: 'File too large',
+          error: 'Maximum file size is 3MB',
+          code: 'FILE_TOO_LARGE'
+        });
+      }
       return res.status(400).json({
         message: 'File upload error',
         error: err.message,
