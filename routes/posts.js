@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const postController = require('../controllers/postController');
 const authMiddleware = require('../middleware/auth');
-const { featuredImageUploadMiddleware } = require('../middleware/upload');
+const { uploadFeaturedImage } = require('../middleware/upload');
 
 /**
  * @swagger
@@ -50,7 +50,7 @@ const { featuredImageUploadMiddleware } = require('../middleware/upload');
  *       500:
  *          description: Internal Server Error
  */
-router.post('/', authMiddleware, featuredImageUploadMiddleware, postController.createPost);
+router.post('/', authMiddleware, uploadFeaturedImage, postController.createPost);
 
 /**
   * @swagger
@@ -145,7 +145,7 @@ router.get('/:id', postController.getPostById);
  *       500:
  *          description: Internal Server Error
  */
-router.put('/:id', authMiddleware, featuredImageUploadMiddleware, postController.updatePost);
+router.put('/:id', authMiddleware, uploadFeaturedImage, postController.updatePost);
 
 /**
  * @swagger
@@ -273,6 +273,6 @@ router.get('/', postController.getAllPosts);
  *       500:
  *         description: Internal Server Error
  */
-router.post('/upload-content-image', authMiddleware, featuredImageUploadMiddleware, postController.uploadContentImage);
+router.post('/upload-content-image', authMiddleware, uploadFeaturedImage, postController.uploadContentImage);
 
 module.exports = router;
