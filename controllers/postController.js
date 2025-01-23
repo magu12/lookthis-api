@@ -32,15 +32,21 @@ const sanitizeOptions = {
  * @returns {Promise<string>} URL загруженного изображения
  */
 async function uploadToCloudinary(buffer, mimeType, folder) {
+  const startTime = Date.now();
+  console.log('\n[CLOUDINARY] ====== STARTING CLOUDINARY UPLOAD ======');
+  
   try {
-    console.log('[CLOUDINARY] Starting upload:', {
+    console.log('[CLOUDINARY] Upload parameters:', {
       mimeType,
       folder,
       bufferSize: buffer.length,
-      bufferValid: Buffer.isBuffer(buffer)
+      bufferValid: Buffer.isBuffer(buffer),
+      startTime: new Date(startTime).toISOString()
     });
 
     return new Promise((resolve, reject) => {
+      console.log('[CLOUDINARY] Creating upload stream...');
+      
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
@@ -48,41 +54,115 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
           quality: 'auto:good',
           fetch_format: 'auto',
           flags: 'lossy',
+          chunk_size: 6000000, // 6MB chunks
           transformation: [
             { width: 2000, crop: 'limit' },
             { quality: 'auto:good', fetch_format: 'auto' }
-          ],
-          timeout: 10000
+          ]
         },
         (error, result) => {
+          const uploadDuration = Date.now() - startTime;
+          
           if (error) {
-            console.error('[CLOUDINARY] Upload stream error:', error);
+            console.error('[CLOUDINARY] ❌ Upload stream error:', {
+              error,
+              duration: uploadDuration,
+              errorDetails: {
+                message: error.message,
+                name: error.name,
+                http_code: error.http_code,
+                stack: error.stack
+              }
+            });
             reject(error);
             return;
           }
-          console.log('[CLOUDINARY] Upload successful:', {
+
+          console.log('[CLOUDINARY] ✅ Upload successful:', {
             publicId: result.public_id,
             format: result.format,
             size: result.bytes,
-            url: result.secure_url
+            width: result.width,
+            height: result.height,
+            url: result.secure_url,
+            duration: uploadDuration
           });
           resolve(result.secure_url);
         }
       );
 
-      // Create a readable stream from buffer
-      const stream = new Readable();
-      stream.push(buffer);
-      stream.push(null);
+      console.log('[CLOUDINARY] Upload stream created, setting up data stream...');
 
-      // Pipe it to the upload stream
-      stream.pipe(uploadStream);
+      // Create a readable stream from buffer and handle errors
+      const stream = new Readable({
+        read() {
+          console.log('[CLOUDINARY] Stream read called, pushing buffer...');
+          this.push(buffer);
+          this.push(null);
+          console.log('[CLOUDINARY] Buffer pushed to stream');
+        }
+      });
+
+      stream.on('error', (error) => {
+        console.error('[CLOUDINARY] ❌ Stream error:', {
+          error,
+          duration: Date.now() - startTime,
+          errorDetails: {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          }
+        });
+        reject(error);
+      });
+
+      uploadStream.on('error', (error) => {
+        console.error('[CLOUDINARY] ❌ Upload stream error:', {
+          error,
+          duration: Date.now() - startTime,
+          errorDetails: {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          }
+        });
+        reject(error);
+      });
+
+      uploadStream.on('end', () => {
+        console.log('[CLOUDINARY] Upload stream ended after', Date.now() - startTime, 'ms');
+      });
+
+      uploadStream.on('data', (data) => {
+        console.log('[CLOUDINARY] Received data chunk:', {
+          chunkSize: data.length,
+          timeElapsed: Date.now() - startTime
+        });
+      });
+
+      console.log('[CLOUDINARY] Starting pipe operation...');
+      // Pipe it to the upload stream with error handling
+      stream.pipe(uploadStream)
+        .on('error', (error) => {
+          console.error('[CLOUDINARY] ❌ Pipe error:', {
+            error,
+            duration: Date.now() - startTime,
+            errorDetails: {
+              message: error.message,
+              name: error.name,
+              stack: error.stack
+            }
+          });
+          reject(error);
+        });
+      console.log('[CLOUDINARY] Pipe operation started');
     });
   } catch (error) {
-    console.error('[CLOUDINARY] Upload error:', {
+    console.error('[CLOUDINARY] ❌ Upload error:', {
       message: error.message,
       name: error.name,
       stack: error.stack,
+      duration: Date.now() - startTime,
       details: error.http_code ? {
         http_code: error.http_code,
         error_info: error.error?.message
@@ -94,6 +174,9 @@ async function uploadToCloudinary(buffer, mimeType, folder) {
 
 // Обработчик загрузки изображений для контента
 const uploadContentImage = async (req, res) => {
+  const startTime = Date.now();
+  console.log('\n[CONTENT UPLOAD] ====== STARTING CONTENT IMAGE UPLOAD ======');
+  
   try {
     console.log('[CONTENT UPLOAD] Request received:', {
       headers: req.headers,
@@ -104,31 +187,36 @@ const uploadContentImage = async (req, res) => {
         originalname: req.file.originalname,
         encoding: req.file.encoding,
         bufferLength: req.file.buffer ? req.file.buffer.length : 0
-      } : 'No file'
+      } : 'No file',
+      startTime: new Date(startTime).toISOString()
     });
 
     if (!req.file) {
-      console.error('[CONTENT UPLOAD] No file in request');
+      console.error('[CONTENT UPLOAD] ❌ No file in request');
       return res.status(400).json({ 
         message: 'No image file provided',
-        error: 'FILE_MISSING'
+        error: 'FILE_MISSING',
+        timeElapsed: Date.now() - startTime
       });
     }
 
     if (!req.file.buffer || req.file.buffer.length === 0) {
-      console.error('[CONTENT UPLOAD] Empty file buffer', {
-        file: req.file
+      console.error('[CONTENT UPLOAD] ❌ Empty file buffer', {
+        file: req.file,
+        timeElapsed: Date.now() - startTime
       });
       return res.status(400).json({ 
         message: 'Empty file provided',
-        error: 'EMPTY_FILE'
+        error: 'EMPTY_FILE',
+        timeElapsed: Date.now() - startTime
       });
     }
 
     console.log('[CONTENT UPLOAD] Starting Cloudinary upload...', {
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
-      originalName: req.file.originalname
+      originalName: req.file.originalname,
+      timeElapsed: Date.now() - startTime
     });
 
     const imageUrl = await uploadToCloudinary(
@@ -137,20 +225,23 @@ const uploadContentImage = async (req, res) => {
       'post_content_images'
     );
 
-    console.log('[CONTENT UPLOAD] Cloudinary upload successful:', {
+    console.log('[CONTENT UPLOAD] ✅ Cloudinary upload successful:', {
       url: imageUrl,
-      originalName: req.file.originalname
+      originalName: req.file.originalname,
+      timeElapsed: Date.now() - startTime
     });
 
     res.status(200).json({ 
       url: imageUrl,
-      originalName: req.file.originalname
+      originalName: req.file.originalname,
+      timeElapsed: Date.now() - startTime
     });
   } catch (error) {
-    console.error('[CONTENT UPLOAD] Error:', {
+    console.error('[CONTENT UPLOAD] ❌ Error:', {
       message: error.message,
       stack: error.stack,
       type: error.constructor.name,
+      timeElapsed: Date.now() - startTime,
       cloudinaryError: error.http_code ? {
         code: error.http_code,
         message: error.error?.message
@@ -160,20 +251,23 @@ const uploadContentImage = async (req, res) => {
     if (error.message.includes('timeout')) {
       return res.status(504).json({ 
         message: 'Upload timeout',
-        error: 'UPLOAD_TIMEOUT'
+        error: 'UPLOAD_TIMEOUT',
+        timeElapsed: Date.now() - startTime
       });
     }
 
     if (error.http_code) {
       return res.status(error.http_code).json({
         message: 'Cloudinary error',
-        error: error.message
+        error: error.message,
+        timeElapsed: Date.now() - startTime
       });
     }
 
     res.status(500).json({ 
       message: 'Failed to upload image',
-      error: error.message
+      error: error.message,
+      timeElapsed: Date.now() - startTime
     });
   }
 };
