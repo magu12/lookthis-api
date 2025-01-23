@@ -316,35 +316,6 @@ const createPost = async (req, res) => {
       });
     }
 
-    // Sanitize HTML with a timeout
-    console.log('[CREATE POST] Starting HTML sanitization...', {
-      contentLength: content.length,
-      timeElapsed: Date.now() - startTime
-    });
-
-    const sanitizePromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('HTML sanitization timeout'));
-      }, 30000); // 30 second timeout
-
-      try {
-        const sanitized = sanitizeHtml(content, sanitizeOptions);
-        clearTimeout(timeout);
-        resolve(sanitized);
-      } catch (error) {
-        clearTimeout(timeout);
-        reject(error);
-      }
-    });
-
-    const sanitizedContent = await sanitizePromise;
-    
-    console.log('[CREATE POST] HTML sanitization complete', {
-      originalLength: content.length,
-      sanitizedLength: sanitizedContent.length,
-      timeElapsed: Date.now() - startTime
-    });
-
     // Handle featured image upload if present
     let featured_image_url = null;
     if (req.file) {
@@ -374,7 +345,21 @@ const createPost = async (req, res) => {
       }
     }
 
-    // Create post in database with timeout
+    // Sanitize HTML (content images are already uploaded)
+    console.log('[CREATE POST] Starting HTML sanitization...', {
+      contentLength: content.length,
+      timeElapsed: Date.now() - startTime
+    });
+
+    const sanitizedContent = sanitizeHtml(content, sanitizeOptions);
+    
+    console.log('[CREATE POST] HTML sanitization complete', {
+      originalLength: content.length,
+      sanitizedLength: sanitizedContent.length,
+      timeElapsed: Date.now() - startTime
+    });
+
+    // Create post in database
     console.log('[CREATE POST] Creating post in database...', {
       titleLength: title.length,
       descriptionLength: short_description.length,
@@ -384,29 +369,14 @@ const createPost = async (req, res) => {
       timeElapsed: Date.now() - startTime
     });
 
-    const dbPromise = new Promise(async (resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Database operation timeout'));
-      }, 30000); // 30 second timeout
+    const postId = await postModel.createPost(
+      user_id,
+      title,
+      short_description,
+      sanitizedContent,
+      featured_image_url
+    );
 
-      try {
-        const postId = await postModel.createPost(
-          user_id, 
-          title, 
-          short_description, 
-          sanitizedContent, 
-          featured_image_url
-        );
-        clearTimeout(timeout);
-        resolve(postId);
-      } catch (error) {
-        clearTimeout(timeout);
-        reject(error);
-      }
-    });
-
-    const postId = await dbPromise;
-    
     console.log('[CREATE POST] ✅ Post created successfully:', {
       postId,
       timeElapsed: Date.now() - startTime
@@ -417,6 +387,7 @@ const createPost = async (req, res) => {
       postId,
       timeElapsed: Date.now() - startTime 
     });
+
   } catch (error) {
     console.error('[CREATE POST] ❌ Error:', {
       message: error.message,
@@ -431,7 +402,6 @@ const createPost = async (req, res) => {
       }
     });
 
-    // Send appropriate error response
     if (!res.headersSent) {
       const status = error.message.includes('timeout') ? 504 : 500;
       res.status(status).json({ 

@@ -16,6 +16,17 @@ const cookieParser = require('cookie-parser');
 // Configure request timeouts and limits
 const timeout = require('connect-timeout');
 app.use(timeout('120s')); // 2 minute timeout
+
+// Configure proxy settings
+app.set('trust proxy', true);
+app.use((req, res, next) => {
+  // Enable keep-alive
+  res.set('Connection', 'keep-alive');
+  // Set longer timeout for Heroku's proxy
+  res.set('Keep-Alive', 'timeout=30');
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(haltOnTimedout);

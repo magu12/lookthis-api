@@ -21,6 +21,16 @@ const upload = multer({
   }
 });
 
+// Add proxy timeout handler
+const proxyTimeout = (req, res, next) => {
+  // Set specific headers for this route
+  res.set('Connection', 'keep-alive');
+  res.set('Keep-Alive', 'timeout=60');
+  // Disable Heroku's default 30s timeout
+  req.socket.setTimeout(120000); // 2 minutes
+  next();
+};
+
 /**
  * @swagger
  * /posts:
@@ -62,6 +72,7 @@ const upload = multer({
  *          description: Internal Server Error
  */
 router.post('/', 
+  proxyTimeout,
   authMiddleware, 
   upload.single('featured_image'),
   (req, res, next) => {
