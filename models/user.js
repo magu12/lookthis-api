@@ -3,13 +3,7 @@ const bcrypt = require('bcrypt');
 
 async function createUser(username, email, password, avatar_url) {
   try {
-    const defaultAvatar = `data:image/svg+xml;base64,${Buffer.from(`
-      <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="100" cy="100" r="100" fill="#E5E7EB"/>
-        <circle cx="100" cy="85" r="35" fill="#9CA3AF"/>
-        <path d="M100 135c25 0 47 15 55 35H45c8-20 30-35 55-35z" fill="#9CA3AF"/>
-      </svg>
-    `).toString('base64')}`;
+    const defaultAvatar = `https://res.cloudinary.com/dxpusp7zw/image/upload/fl_preserve_transparency/v1737639376/post_content_images/f7mkiigoysg5h1yrfvif.jpg?_s=public-apps`;
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
@@ -58,9 +52,9 @@ async function updateUser(id, updates) {
     const setClause = Object.entries(updates)
       .map(([key, _]) => `${key} = ?`)
       .join(', ');
-    
+
     const values = [...Object.values(updates), id];
-    
+
     const [result] = await db.query(
       `UPDATE users SET ${setClause} WHERE id = ?`,
       values
