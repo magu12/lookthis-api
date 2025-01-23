@@ -57,7 +57,7 @@ const uploadConfig = {
     fileSize: 10 * 1024 * 1024, // 10MB
     fieldSize: 10 * 1024 * 1024, // 10MB
     files: 1,
-    parts: 2 // fieldname + file
+    parts: 10 // Increased to allow for more form fields
   }
 };
 
