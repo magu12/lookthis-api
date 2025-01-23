@@ -10,6 +10,17 @@ const postController = require('../controllers/postController');
 const authMiddleware = require('../middleware/auth');
 const { uploadFeaturedImage, uploadContentImage } = require('../middleware/upload');
 
+// Configure multer for handling large files
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fieldSize: 50 * 1024 * 1024 // 50MB limit for text fields
+  }
+});
+
 /**
  * @swagger
  * /posts:
@@ -50,7 +61,20 @@ const { uploadFeaturedImage, uploadContentImage } = require('../middleware/uploa
  *       500:
  *          description: Internal Server Error
  */
-router.post('/', authMiddleware, uploadFeaturedImage, postController.createPost);
+router.post('/', 
+  authMiddleware, 
+  upload.single('featured_image'),
+  (req, res, next) => {
+    console.log('[POST ROUTE] Request received:', {
+      bodySize: req.headers['content-length'],
+      hasFile: !!req.file,
+      fileSize: req.file?.size,
+      timestamp: new Date().toISOString()
+    });
+    next();
+  },
+  postController.createPost
+);
 
 /**
   * @swagger

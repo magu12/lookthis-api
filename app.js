@@ -13,6 +13,17 @@ const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts')
 const cookieParser = require('cookie-parser');
 
+// Configure request timeouts and limits
+const timeout = require('connect-timeout');
+app.use(timeout('120s')); // 2 minute timeout
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(haltOnTimedout);
+
+function haltOnTimedout(req, res, next) {
+  if (!req.timedout) next();
+}
+
 // Log all environment variables (except secrets)
 console.log('Checking environment variables...');
 const safeEnvVars = [

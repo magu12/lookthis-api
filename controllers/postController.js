@@ -287,8 +287,7 @@ const createPost = async (req, res) => {
         hasTitle: !!req.body.title,
         hasDescription: !!req.body.short_description,
         contentLength: req.body.content?.length,
-        userId: req.user?.userId,
-        rawBody: req.body
+        userId: req.user?.userId
       },
       file: req.file ? {
         fieldname: req.file.fieldname,
@@ -302,14 +301,14 @@ const createPost = async (req, res) => {
     const { title, short_description, content } = req.body;
     const user_id = req.user.userId;
     
+    // Validate required fields
     if (!user_id || !title || !short_description || !content) {
       console.error('[CREATE POST] ❌ Validation failed:', {
         hasUserId: !!user_id,
         hasTitle: !!title,
         hasDescription: !!short_description,
         hasContent: !!content,
-        timeElapsed: Date.now() - startTime,
-        body: req.body
+        timeElapsed: Date.now() - startTime
       });
       return res.status(400).json({ 
         message: 'User ID, title, short description, and content are required',
@@ -317,13 +316,28 @@ const createPost = async (req, res) => {
       });
     }
 
+    // Sanitize HTML with a timeout
     console.log('[CREATE POST] Starting HTML sanitization...', {
       contentLength: content.length,
       timeElapsed: Date.now() - startTime
     });
 
-    // Санитизация HTML
-    const sanitizedContent = sanitizeHtml(content, sanitizeOptions);
+    const sanitizePromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('HTML sanitization timeout'));
+      }, 30000); // 30 second timeout
+
+      try {
+        const sanitized = sanitizeHtml(content, sanitizeOptions);
+        clearTimeout(timeout);
+        resolve(sanitized);
+      } catch (error) {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
+
+    const sanitizedContent = await sanitizePromise;
     
     console.log('[CREATE POST] HTML sanitization complete', {
       originalLength: content.length,
@@ -331,6 +345,7 @@ const createPost = async (req, res) => {
       timeElapsed: Date.now() - startTime
     });
 
+    // Handle featured image upload if present
     let featured_image_url = null;
     if (req.file) {
       console.log('[CREATE POST] Starting featured image upload...', {
@@ -339,18 +354,27 @@ const createPost = async (req, res) => {
         timeElapsed: Date.now() - startTime
       });
 
-      featured_image_url = await uploadToCloudinary(
-        req.file.buffer,
-        req.file.mimetype,
-        'featured_images'
-      );
+      try {
+        featured_image_url = await uploadToCloudinary(
+          req.file.buffer,
+          req.file.mimetype,
+          'featured_images'
+        );
 
-      console.log('[CREATE POST] Featured image upload complete:', {
-        url: featured_image_url,
-        timeElapsed: Date.now() - startTime
-      });
+        console.log('[CREATE POST] Featured image upload complete:', {
+          url: featured_image_url,
+          timeElapsed: Date.now() - startTime
+        });
+      } catch (error) {
+        console.error('[CREATE POST] ❌ Featured image upload failed:', {
+          error: error.message,
+          timeElapsed: Date.now() - startTime
+        });
+        // Continue without featured image if upload fails
+      }
     }
 
+    // Create post in database with timeout
     console.log('[CREATE POST] Creating post in database...', {
       titleLength: title.length,
       descriptionLength: short_description.length,
@@ -360,7 +384,28 @@ const createPost = async (req, res) => {
       timeElapsed: Date.now() - startTime
     });
 
-    const postId = await postModel.createPost(user_id, title, short_description, sanitizedContent, featured_image_url);
+    const dbPromise = new Promise(async (resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Database operation timeout'));
+      }, 30000); // 30 second timeout
+
+      try {
+        const postId = await postModel.createPost(
+          user_id, 
+          title, 
+          short_description, 
+          sanitizedContent, 
+          featured_image_url
+        );
+        clearTimeout(timeout);
+        resolve(postId);
+      } catch (error) {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
+
+    const postId = await dbPromise;
     
     console.log('[CREATE POST] ✅ Post created successfully:', {
       postId,
@@ -383,17 +428,13 @@ const createPost = async (req, res) => {
         hasDescription: !!req.body?.short_description,
         contentLength: req.body?.content?.length,
         hasFile: !!req.file
-      },
-      details: error.code ? {
-        code: error.code,
-        errno: error.errno,
-        sqlMessage: error.sqlMessage
-      } : undefined
+      }
     });
 
-    // Проверяем, не отправлен ли уже ответ
+    // Send appropriate error response
     if (!res.headersSent) {
-      res.status(500).json({ 
+      const status = error.message.includes('timeout') ? 504 : 500;
+      res.status(status).json({ 
         message: 'Failed to create post',
         error: error.message,
         timeElapsed: Date.now() - startTime
