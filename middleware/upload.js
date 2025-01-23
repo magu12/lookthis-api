@@ -3,21 +3,32 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    console.log('File validation passed:', file.originalname);
-    cb(null, true)
-  } else {
-    console.log('File validation failed:', file.originalname);
-    cb(new Error('Not an image! Please upload an image file.'), false)
+  console.log('Received file:', {
+    fieldname: file.fieldname,
+    originalname: file.originalname,
+    mimetype: file.mimetype
+  });
+
+  if (!file.mimetype.startsWith('image/')) {
+    console.log('File validation failed - invalid mime type:', file.mimetype);
+    return cb(new Error('Only image files are allowed'), false);
   }
+
+  if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    console.log('File validation failed - invalid extension:', file.originalname);
+    return cb(new Error('Only jpg, jpeg, png and gif files are allowed'), false);
+  }
+
+  console.log('File validation passed');
+  cb(null, true);
 };
 
 const uploadConfig = { 
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 3 * 1024 * 1024, // 3MB max size
-    fieldSize: 3 * 1024 * 1024 // 3MB max field size
+    fileSize: 5 * 1024 * 1024, // 5MB max size
+    fieldSize: 5 * 1024 * 1024 // 5MB max field size
   }
 };
 
@@ -32,25 +43,27 @@ const uploadContentImage = multer(uploadConfig).single('content_image');
 
 // Creating wrapper middleware for error handling
 const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
-  // Set a timeout for the upload
+  console.log('Starting file upload process');
+  
+  // Set a timeout for the upload - reduced to 25 seconds to give buffer for Heroku's 30s limit
   const uploadTimeout = setTimeout(() => {
     console.error('Upload timeout reached');
     res.status(408).json({
       message: 'Upload timeout reached',
       code: 'UPLOAD_TIMEOUT'
     });
-  }, 30000); // 30 seconds timeout
+  }, 25000);
 
   uploadFn(req, res, function (err) {
     // Clear the timeout since upload completed (either success or error)
     clearTimeout(uploadTimeout);
 
     if (err instanceof multer.MulterError) {
-      console.log('Multer error:', err);
+      console.error('Multer error:', err);
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
           message: 'File too large',
-          error: 'Maximum file size is 3MB',
+          error: 'Maximum file size is 5MB',
           code: 'FILE_TOO_LARGE'
         });
       }
@@ -60,7 +73,7 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
         code: 'MULTER_ERROR'
       });
     } else if (err) {
-      console.log('Upload error:', err);
+      console.error('Upload error:', err);
       return res.status(400).json({
         message: 'File upload failed',
         error: err.message,
@@ -69,13 +82,14 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
     }
     
     if (!req.file && !isOptional) {
-      console.log('No file uploaded');
+      console.error('No file in request');
       return res.status(400).json({
         message: 'Please upload a file',
         code: 'NO_FILE'
       });
     }
     
+    console.log('File upload middleware completed successfully');
     next();
   });
 };
