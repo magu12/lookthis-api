@@ -5,28 +5,48 @@ const storage = multer.memoryStorage();
 console.log('[MULTER CONFIG] Memory storage initialized');
 
 const fileFilter = (req, file, cb) => {
+  const startTime = Date.now();
   console.log('\n[UPLOAD MIDDLEWARE] ====== NEW FILE FILTER CHECK ======');
-  console.log('[UPLOAD MIDDLEWARE] Request headers:', req.headers);
+  console.log('[UPLOAD MIDDLEWARE] Request details:', {
+    url: req.url,
+    method: req.method,
+    contentType: req.headers['content-type'],
+    contentLength: req.headers['content-length'],
+    authorization: req.headers.authorization ? 'Present' : 'Missing',
+    startTime: new Date(startTime).toISOString()
+  });
+
   console.log('[UPLOAD MIDDLEWARE] File details:', {
     fieldname: file.fieldname,
     originalname: file.originalname,
     mimetype: file.mimetype,
-    headers: file.headers,
     encoding: file.encoding,
-    raw: file
+    headers: file.headers,
+    raw: file,
+    timeElapsed: Date.now() - startTime
   });
 
   if (!file.mimetype.startsWith('image/')) {
-    console.log('[UPLOAD MIDDLEWARE] ❌ File validation failed - invalid mime type:', file.mimetype);
+    console.log('[UPLOAD MIDDLEWARE] ❌ File validation failed - invalid mime type:', {
+      mimetype: file.mimetype,
+      timeElapsed: Date.now() - startTime
+    });
     return cb(new Error('Only image files are allowed'), false);
   }
 
   if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-    console.log('[UPLOAD MIDDLEWARE] ❌ File validation failed - invalid extension:', file.originalname);
+    console.log('[UPLOAD MIDDLEWARE] ❌ File validation failed - invalid extension:', {
+      filename: file.originalname,
+      timeElapsed: Date.now() - startTime
+    });
     return cb(new Error('Only jpg, jpeg, png, gif and webp files are allowed'), false);
   }
 
-  console.log('[UPLOAD MIDDLEWARE] ✅ File validation passed');
+  console.log('[UPLOAD MIDDLEWARE] ✅ File validation passed:', {
+    filename: file.originalname,
+    mimetype: file.mimetype,
+    timeElapsed: Date.now() - startTime
+  });
   cb(null, true);
 };
 
@@ -43,7 +63,8 @@ const uploadConfig = {
 
 console.log('[MULTER CONFIG] Upload config:', {
   limits: uploadConfig.limits,
-  storage: 'memoryStorage'
+  storage: 'memoryStorage',
+  timestamp: new Date().toISOString()
 });
 
 // Middleware for avatar upload
@@ -64,13 +85,20 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
     contentLength: req.headers['content-length'],
     boundary: req.headers['content-type'] ? req.headers['content-type'].split('boundary=')[1] : 'no boundary',
     authorization: req.headers.authorization ? 'Present' : 'Missing',
-    allHeaders: req.headers
+    allHeaders: req.headers,
+    startTime: new Date(uploadStartTime).toISOString()
   });
   
   // Set a timeout for the upload
   const uploadTimeout = setTimeout(() => {
     if (!uploadFinished) {
-      console.error('[UPLOAD MIDDLEWARE] ⚠️ Upload timeout reached after', Date.now() - uploadStartTime, 'ms');
+      console.error('[UPLOAD MIDDLEWARE] ⚠️ Upload timeout reached:', {
+        url: req.url,
+        method: req.method,
+        contentType: req.headers['content-type'],
+        timeElapsed: Date.now() - uploadStartTime,
+        boundary: req.headers['content-type'] ? req.headers['content-type'].split('boundary=')[1] : 'no boundary'
+      });
       if (!res.headersSent) {
         res.status(408).json({
           message: 'Upload timeout reached',
@@ -79,7 +107,7 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
         });
       }
     }
-  }, 10000);
+  }, 25000); // 25 seconds timeout
 
   uploadFn(req, res, function (err) {
     uploadFinished = true;
@@ -94,7 +122,13 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
         message: err.message,
         stack: err.stack,
         type: 'MulterError',
-        timeElapsed
+        timeElapsed,
+        requestDetails: {
+          url: req.url,
+          method: req.method,
+          contentType: req.headers['content-type'],
+          contentLength: req.headers['content-length']
+        }
       });
       
       if (err.code === 'LIMIT_FILE_SIZE') {
@@ -116,7 +150,13 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
         message: err.message,
         stack: err.stack,
         type: err.constructor.name,
-        timeElapsed
+        timeElapsed,
+        requestDetails: {
+          url: req.url,
+          method: req.method,
+          contentType: req.headers['content-type'],
+          contentLength: req.headers['content-length']
+        }
       });
       return res.status(400).json({
         message: 'File upload failed',
@@ -130,7 +170,13 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
       console.error('[UPLOAD MIDDLEWARE] ❌ No file in request', {
         headers: req.headers,
         body: Object.keys(req.body || {}),
-        timeElapsed
+        timeElapsed,
+        requestDetails: {
+          url: req.url,
+          method: req.method,
+          contentType: req.headers['content-type'],
+          contentLength: req.headers['content-length']
+        }
       });
       return res.status(400).json({
         message: 'Please upload a file',
@@ -147,7 +193,12 @@ const handleUploadError = (req, res, next, uploadFn, isOptional = false) => {
         originalname: req.file.originalname,
         encoding: req.file.encoding,
         bufferLength: req.file.buffer ? req.file.buffer.length : 0,
-        timeElapsed
+        timeElapsed,
+        requestDetails: {
+          url: req.url,
+          method: req.method,
+          contentType: req.headers['content-type']
+        }
       });
     }
     

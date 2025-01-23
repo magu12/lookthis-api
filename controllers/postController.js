@@ -273,31 +273,134 @@ const uploadContentImage = async (req, res) => {
 };
 
 const createPost = async (req, res) => {
+  const startTime = Date.now();
+  console.log('\n[CREATE POST] ====== STARTING POST CREATION ======');
+  
   try {
+    console.log('[CREATE POST] Request received:', {
+      headers: {
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length'],
+        authorization: req.headers.authorization ? 'Present' : 'Missing'
+      },
+      body: {
+        hasTitle: !!req.body.title,
+        hasDescription: !!req.body.short_description,
+        contentLength: req.body.content?.length,
+        userId: req.user?.userId,
+        rawBody: req.body
+      },
+      file: req.file ? {
+        fieldname: req.file.fieldname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        originalname: req.file.originalname
+      } : 'No file',
+      startTime: new Date(startTime).toISOString()
+    });
+
     const { title, short_description, content } = req.body;
     const user_id = req.user.userId;
     
     if (!user_id || !title || !short_description || !content) {
-      return res.status(400).json({ message: 'User ID, title, short description, and content are required' });
+      console.error('[CREATE POST] ❌ Validation failed:', {
+        hasUserId: !!user_id,
+        hasTitle: !!title,
+        hasDescription: !!short_description,
+        hasContent: !!content,
+        timeElapsed: Date.now() - startTime,
+        body: req.body
+      });
+      return res.status(400).json({ 
+        message: 'User ID, title, short description, and content are required',
+        timeElapsed: Date.now() - startTime
+      });
     }
+
+    console.log('[CREATE POST] Starting HTML sanitization...', {
+      contentLength: content.length,
+      timeElapsed: Date.now() - startTime
+    });
 
     // Санитизация HTML
     const sanitizedContent = sanitizeHtml(content, sanitizeOptions);
+    
+    console.log('[CREATE POST] HTML sanitization complete', {
+      originalLength: content.length,
+      sanitizedLength: sanitizedContent.length,
+      timeElapsed: Date.now() - startTime
+    });
 
     let featured_image_url = null;
     if (req.file) {
+      console.log('[CREATE POST] Starting featured image upload...', {
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        timeElapsed: Date.now() - startTime
+      });
+
       featured_image_url = await uploadToCloudinary(
         req.file.buffer,
         req.file.mimetype,
         'featured_images'
       );
+
+      console.log('[CREATE POST] Featured image upload complete:', {
+        url: featured_image_url,
+        timeElapsed: Date.now() - startTime
+      });
     }
 
+    console.log('[CREATE POST] Creating post in database...', {
+      titleLength: title.length,
+      descriptionLength: short_description.length,
+      contentLength: sanitizedContent.length,
+      hasFeaturedImage: !!featured_image_url,
+      userId: user_id,
+      timeElapsed: Date.now() - startTime
+    });
+
     const postId = await postModel.createPost(user_id, title, short_description, sanitizedContent, featured_image_url);
-    res.status(201).json({ message: 'Post created successfully', postId });
+    
+    console.log('[CREATE POST] ✅ Post created successfully:', {
+      postId,
+      timeElapsed: Date.now() - startTime
+    });
+
+    res.status(201).json({ 
+      message: 'Post created successfully', 
+      postId,
+      timeElapsed: Date.now() - startTime 
+    });
   } catch (error) {
-    console.error('Error creating post:', error);
-    res.status(500).json({ message: 'Failed to create post' });
+    console.error('[CREATE POST] ❌ Error:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name,
+      timeElapsed: Date.now() - startTime,
+      requestBody: {
+        hasTitle: !!req.body?.title,
+        hasDescription: !!req.body?.short_description,
+        contentLength: req.body?.content?.length,
+        hasFile: !!req.file
+      },
+      details: error.code ? {
+        code: error.code,
+        errno: error.errno,
+        sqlMessage: error.sqlMessage
+      } : undefined
+    });
+
+    // Проверяем, не отправлен ли уже ответ
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        message: 'Failed to create post',
+        error: error.message,
+        timeElapsed: Date.now() - startTime
+      });
+    } else {
+      console.error('[CREATE POST] ❌ Headers already sent, could not send error response');
+    }
   }
 };
 
